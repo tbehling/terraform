@@ -268,6 +268,16 @@ func (n *NodePlannableResourceInstance) managedResourceExecute(ctx EvalContext) 
 			ctx, change, instanceRefreshState, n.ForceCreateBeforeDestroy, n.forceReplace,
 		)
 		diags = diags.Append(planDiags)
+
+		// Perform an early write of resource changes, in case planning has
+		// errored but we still need to output the changes we have.
+		// This is relevant in the case of generated configuration, which if
+		// invalid will cause the plan to error, but should still be written to
+		// the plan file and to disk so the user can proceed.
+		//
+		// Note that n.writeChange() is called again below just before
+		// n.writeResourceInstanceState()
+		diags = diags.Append(n.writeChange(ctx, change, ""))
 		if diags.HasErrors() {
 			return diags
 		}
